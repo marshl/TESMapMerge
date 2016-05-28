@@ -1,0 +1,4 @@
+*.sdf
+TESMapMerge/Release/
+ipch/
+*.jpg
