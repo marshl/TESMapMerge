@@ -2,3 +2,6 @@
 TESMapMerge/Release/
 ipch/
 *.jpg
+Maps/
+*.bmp
+Release/
