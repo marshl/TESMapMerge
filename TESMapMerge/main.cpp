@@ -8,8 +8,6 @@
 #include <string>
 #include <windows.h>
 
-using namespace std;
-
 const int MIN_X = -29;
 const int MAX_X = 23;
 const int RANGE_X = MAX_X - MIN_X;
@@ -29,7 +27,7 @@ const int COMPOSITE_BYTECOUNT_MB = COMPOSITE_BYTECOUNT / ( 1024 * 1024 );
 
 struct ImageFile
 {
-    string filename;
+    std::string filename;
     int x;
     int y;
 };
@@ -93,10 +91,10 @@ void PrintFilledCells()
     {
         for ( int x = 0; x < RANGE_X; ++x )
         {
-            if ( imageCells[y][x] != nullptr ) cout << "X";
-            else cout << " ";
+            std::cout << ( imageCells[y][x] != nullptr ? 'X' : ' ' );
         }
-        cout << "\n";
+
+        std::cout << "\n";
     }
 }
 
@@ -119,14 +117,14 @@ void FindImageCells()
         {
             continue;
         }
-        string filename = FindFileData.cFileName;
+        std::string filename = FindFileData.cFileName;
         std::smatch matches;
         std::regex exp( "(-?[0-9]+),(-?[0-9]+)" );
-        regex_search( filename, matches, exp );
+        std::regex_search( filename, matches, exp );
 
         if ( matches.size() < 3 )
         {
-            cout << "Error parsing file: " << filename << "=>" << matches.size() << "\n";
+            std::cout << "Error parsing file: " << filename << "=>" << matches.size() << "\n";
             continue;
         }
 
@@ -146,15 +144,14 @@ void FindImageCells()
 
 void RecurseiveFileLoad()
 {
-
-    string path = "../maps";
-    string mask = "*";
-    vector<string> files;
+    std::string path = "../maps";
+    std::string mask = "*";
+    std::vector<std::string> files;
 
     HANDLE hFind = INVALID_HANDLE_VALUE;
     WIN32_FIND_DATA ffd;
-    string spec;
-    stack<string> directories;
+    std::string spec;
+    std::stack<std::string> directories;
 
     directories.push( path );
     files.clear();
@@ -181,13 +178,13 @@ void RecurseiveFileLoad()
                 }
                 else
                 {
-                    string filename = ffd.cFileName;
-                    string fullpath = path + "\\" + filename;
+                    std::string filename = ffd.cFileName;
+                    std::string fullpath = path + "\\" + filename;
 
-                    if ( filename.rfind( '.' ) != string::npos )
+                    if ( filename.rfind( '.' ) != std::string::npos )
                     {
-                        string extensionless = filename.substr( 0, filename.rfind( '.' ) );
-                        cout << fullpath << " -> " << extensionless << "\n";
+                        std::string extensionless = filename.substr( 0, filename.rfind( '.' ) );
+                        std::cout << fullpath << " -> " << extensionless << "\n";
                     }
                 }
             }
@@ -206,8 +203,7 @@ void RecurseiveFileLoad()
 
 void RenderMap()
 {
-
-    ofstream fout( "../output.bmp", ofstream::binary );
+    std::ofstream fout( "../output.bmp", std::ofstream::binary );
 
     BITMAPFILEHEADER fileHeader;
     fileHeader.bfType = 19778;
@@ -228,25 +224,25 @@ void RenderMap()
 
     char dataRow[3 * IMAGE_WIDTH];
 
-    ifstream rowFileHandles[RANGE_X];
+    std::ifstream rowFileHandles[RANGE_X];
 
     for ( int y = 0; y < RANGE_Y; ++y )
     {
         for ( int x = 0; x < RANGE_X; ++x )
         {
-            ifstream& fin = rowFileHandles[x];
+            std::ifstream& fin = rowFileHandles[x];
             if ( imageCells[y][x] != nullptr )
             {
-                fin.open( "../maps/" + imageCells[y][x]->filename, ifstream::binary );
+                fin.open( "../maps/" + imageCells[y][x]->filename, std::ifstream::binary );
             }
             else
             {
-                fin.open( "../maps/Wilderness (-21,28).bmp", ifstream::binary );
+                fin.open( "../maps/Wilderness (-21,28).bmp", std::ifstream::binary );
             }
 
             if ( !fin.is_open() )
             {
-                cout << "Error opening image file: " << imageCells[y][x]->filename << "\n";
+                std::cout << "Error opening image file: " << imageCells[y][x]->filename << "\n";
                 continue;
             }
 
@@ -257,7 +253,7 @@ void RenderMap()
             for ( int x = 0; x < RANGE_X; ++x )
             {
                 memset( dataRow, NULL, IMAGE_ROW_SIZE );
-                ifstream& fin = rowFileHandles[x];
+                std::ifstream& fin = rowFileHandles[x];
                 if ( fin.is_open() )
                 {
                     fin.read( dataRow, IMAGE_ROW_SIZE );
