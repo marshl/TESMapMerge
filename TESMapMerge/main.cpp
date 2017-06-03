@@ -38,6 +38,7 @@ void InitialiseImageCells();
 void FindImageCells();
 void DestroyImageCells();
 void PrintFilledCells();
+void RenderMap();
 
 ImageFile*** imageCells = new ImageFile**[RANGE_Y];
 
@@ -49,75 +50,7 @@ int main( int argc, char* argv[] )
     FindImageCells();
     PrintFilledCells();
 
-    ofstream fout( "../output.bmp", ofstream::binary );
-
-    BITMAPFILEHEADER fileHeader;
-    fileHeader.bfType = 19778;
-    fileHeader.bfSize = sizeof( BITMAPFILEHEADER ) + sizeof( BITMAPINFOHEADER ) + sizeof( char ) * COMPOSITE_BYTECOUNT;
-    fileHeader.bfOffBits = sizeof( BITMAPFILEHEADER ) + sizeof( BITMAPINFOHEADER );
-    fout.write( (char*)( &fileHeader ), sizeof( BITMAPFILEHEADER ) );
-
-    BITMAPINFOHEADER infoHeader;
-    memset( &infoHeader, NULL, sizeof( BITMAPINFOHEADER ) );
-    infoHeader.biSize = sizeof( BITMAPINFOHEADER );
-    infoHeader.biWidth = COMPOSITE_PIXEL_WIDTH;
-    infoHeader.biHeight = COMPOSITE_PIXEL_HEIGHT;
-    infoHeader.biPlanes = 1;
-    infoHeader.biBitCount = 24;
-    infoHeader.biCompression = 0;
-    infoHeader.biSizeImage = sizeof( char ) * COMPOSITE_BYTECOUNT;
-    fout.write( (char*)( &infoHeader ), sizeof( BITMAPINFOHEADER ) );
-
-    char dataRow[3 * IMAGE_WIDTH];
-
-    ifstream rowFileHandles[RANGE_X];
-
-    for ( int y = 0; y < RANGE_Y; ++y )
-    {
-        for ( int x = 0; x < RANGE_X; ++x )
-        {
-            ifstream& fin = rowFileHandles[x];
-            if ( imageCells[y][x] != nullptr )
-            {
-                fin.open( "../maps/" + imageCells[y][x]->filename, ifstream::binary );
-            }
-            else
-            {
-                fin.open( "../maps/Wilderness (-21,28).bmp", ifstream::binary );
-            }
-
-            if ( !fin.is_open() )
-            {
-                cout << "Error opening image file: " << imageCells[y][x]->filename << "\n";
-                continue;
-            }
-
-            fin.seekg( sizeof( BITMAPFILEHEADER ) + sizeof( BITMAPINFOHEADER ) );
-        }
-        for ( int line = 0; line < IMAGE_HEIGHT; ++line )
-        {
-            for ( int x = 0; x < RANGE_X; ++x )
-            {
-                memset( dataRow, NULL, IMAGE_ROW_SIZE );
-                ifstream& fin = rowFileHandles[x];
-                if ( fin.is_open() )
-                {
-                    fin.read( dataRow, IMAGE_ROW_SIZE );
-                }
-
-                fout.write( dataRow, IMAGE_ROW_SIZE );
-            }
-        }
-
-        for ( int x = 0; x < RANGE_X; ++x )
-        {
-            if ( rowFileHandles[x].is_open())
-            {
-                rowFileHandles[x].close();
-            }
-        }
-
-    }
+    RenderMap();
 
     DestroyImageCells();
     system( "pause" );
@@ -268,5 +201,79 @@ void RecurseiveFileLoad()
 
         FindClose( hFind );
         hFind = INVALID_HANDLE_VALUE;
+    }
+}
+
+void RenderMap()
+{
+
+    ofstream fout( "../output.bmp", ofstream::binary );
+
+    BITMAPFILEHEADER fileHeader;
+    fileHeader.bfType = 19778;
+    fileHeader.bfSize = sizeof( BITMAPFILEHEADER ) + sizeof( BITMAPINFOHEADER ) + sizeof( char ) * COMPOSITE_BYTECOUNT;
+    fileHeader.bfOffBits = sizeof( BITMAPFILEHEADER ) + sizeof( BITMAPINFOHEADER );
+    fout.write( (char*)( &fileHeader ), sizeof( BITMAPFILEHEADER ) );
+
+    BITMAPINFOHEADER infoHeader;
+    memset( &infoHeader, NULL, sizeof( BITMAPINFOHEADER ) );
+    infoHeader.biSize = sizeof( BITMAPINFOHEADER );
+    infoHeader.biWidth = COMPOSITE_PIXEL_WIDTH;
+    infoHeader.biHeight = COMPOSITE_PIXEL_HEIGHT;
+    infoHeader.biPlanes = 1;
+    infoHeader.biBitCount = 24;
+    infoHeader.biCompression = 0;
+    infoHeader.biSizeImage = sizeof( char ) * COMPOSITE_BYTECOUNT;
+    fout.write( (char*)( &infoHeader ), sizeof( BITMAPINFOHEADER ) );
+
+    char dataRow[3 * IMAGE_WIDTH];
+
+    ifstream rowFileHandles[RANGE_X];
+
+    for ( int y = 0; y < RANGE_Y; ++y )
+    {
+        for ( int x = 0; x < RANGE_X; ++x )
+        {
+            ifstream& fin = rowFileHandles[x];
+            if ( imageCells[y][x] != nullptr )
+            {
+                fin.open( "../maps/" + imageCells[y][x]->filename, ifstream::binary );
+            }
+            else
+            {
+                fin.open( "../maps/Wilderness (-21,28).bmp", ifstream::binary );
+            }
+
+            if ( !fin.is_open() )
+            {
+                cout << "Error opening image file: " << imageCells[y][x]->filename << "\n";
+                continue;
+            }
+
+            fin.seekg( sizeof( BITMAPFILEHEADER ) + sizeof( BITMAPINFOHEADER ) );
+        }
+        for ( int line = 0; line < IMAGE_HEIGHT; ++line )
+        {
+            for ( int x = 0; x < RANGE_X; ++x )
+            {
+                memset( dataRow, NULL, IMAGE_ROW_SIZE );
+                ifstream& fin = rowFileHandles[x];
+                if ( fin.is_open() )
+                {
+                    fin.read( dataRow, IMAGE_ROW_SIZE );
+                }
+
+                fout.write( dataRow, IMAGE_ROW_SIZE );
+            }
+        }
+
+        for ( int x = 0; x < RANGE_X; ++x )
+        {
+            if ( rowFileHandles[x].is_open() )
+            {
+                rowFileHandles[x].close();
+            }
+        }
+
     }
 }
