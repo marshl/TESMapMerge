@@ -6,24 +6,13 @@
 #include <regex>
 #include <stack>
 #include <string>
+
+#define NOMINMAX
 #include <windows.h>
-
-const int MIN_X = -29;
-const int MAX_X = 23;
-const int RANGE_X = MAX_X - MIN_X;
-
-const int MIN_Y = -19;
-const int MAX_Y = 28;
-const int RANGE_Y = MAX_Y - MIN_Y;
 
 const int IMAGE_HEIGHT = 256;
 const int IMAGE_WIDTH = 256;
 const size_t IMAGE_ROW_SIZE = sizeof( char ) * 3 * IMAGE_WIDTH;
-
-const int COMPOSITE_PIXEL_HEIGHT = RANGE_Y * IMAGE_HEIGHT;
-const int COMPOSITE_PIXEL_WIDTH = RANGE_X * IMAGE_WIDTH;
-const int COMPOSITE_BYTECOUNT = COMPOSITE_PIXEL_WIDTH * COMPOSITE_PIXEL_HEIGHT * 3;
-const int COMPOSITE_BYTECOUNT_MB = COMPOSITE_BYTECOUNT / ( 1024 * 1024 );
 
 struct ImageFile
 {
@@ -32,64 +21,31 @@ struct ImageFile
     int y;
 };
 
-void InitialiseImageCells();
-void FindImageCells();
-void DestroyImageCells();
+void FindImageCells( int& minX, int& maxX, int& minY, int& maxY );
 void PrintFilledCells();
 void RenderMap();
 
-ImageFile*** imageCells = new ImageFile**[RANGE_Y];
+std::vector<std::vector<ImageFile*>> imageCells;
 
 const char* waterMap = "Wilderness (-21,28).bmp";
 
 int main( int argc, char* argv[] )
 {
-    InitialiseImageCells();
-    FindImageCells();
+    int minX, maxX, minY, maxY;
+
+    FindImageCells( minX, maxX, minY, maxY );
     PrintFilledCells();
 
     RenderMap();
 
-    DestroyImageCells();
-    system( "pause" );
-
     return 0;
-}
-
-void InitialiseImageCells()
-{
-    for ( int y = 0; y < RANGE_Y; ++y )
-    {
-        imageCells[y] = new ImageFile*[RANGE_X];
-        for ( int x = 0; x < RANGE_X; ++x )
-        {
-            imageCells[y][x] = nullptr;
-        }
-    }
-}
-
-void DestroyImageCells()
-{
-    for ( int y = 0; y < RANGE_Y; ++y )
-    {
-
-        for ( int x = 0; x < RANGE_X; ++x )
-        {
-            if ( imageCells[y][x] != nullptr )
-            {
-                delete imageCells[y][x];
-            }
-        }
-        delete imageCells[y];
-    }
-    delete imageCells;
 }
 
 void PrintFilledCells()
 {
-    for ( int y = RANGE_Y - 1; y >= 0; --y )
+    for ( int y = (int)imageCells.size() - 1; y >= 0; --y )
     {
-        for ( int x = 0; x < RANGE_X; ++x )
+        for ( int x = 0; x < (int)imageCells[y].size(); ++x )
         {
             std::cout << ( imageCells[y][x] != nullptr ? 'X' : ' ' );
         }
@@ -98,137 +54,108 @@ void PrintFilledCells()
     }
 }
 
-void FindImageCells()
+void FindImageCells( int& minX, int& maxX, int& minY, int& maxY )
 {
-    WIN32_FIND_DATA FindFileData;
-    HANDLE hFind = INVALID_HANDLE_VALUE;
-    hFind = FindFirstFile( "../maps/*", &FindFileData );
+    minX = maxX = minY = maxY = 0;
 
-    if ( hFind == INVALID_HANDLE_VALUE )
+    for ( int i = 0; i < 2; ++i )
     {
-        std::cout << "Error: invalid path\n";
-        return;
-    }
+        WIN32_FIND_DATA FindFileData;
+        HANDLE hFind = INVALID_HANDLE_VALUE;
+        hFind = FindFirstFile( "../maps/*", &FindFileData );
 
-    do
-    {
-        if ( strcmp( FindFileData.cFileName, "." ) == 0
-            || strcmp( FindFileData.cFileName, ".." ) == 0 )
-        {
-            continue;
-        }
-        std::string filename = FindFileData.cFileName;
-        std::smatch matches;
-        std::regex exp( "(-?[0-9]+),(-?[0-9]+)" );
-        std::regex_search( filename, matches, exp );
-
-        if ( matches.size() < 3 )
-        {
-            std::cout << "Error parsing file: " << filename << "=>" << matches.size() << "\n";
-            continue;
-        }
-
-        int x = atoi( matches[0].str().c_str() ) - MIN_X;
-        int y = atoi( matches[2].str().c_str() ) - MIN_Y;
-
-        if ( x >= 0 && x < RANGE_X && y >= 0 && y < RANGE_Y )
-        {
-            ImageFile* img = imageCells[y][x] = new ImageFile();
-            img->filename = filename;
-            img->x = x;
-            img->y = y;
-        }
-    } while ( FindNextFile( hFind, &FindFileData ) != 0 );
-    FindClose( hFind );
-}
-
-void RecurseiveFileLoad()
-{
-    std::string path = "../maps";
-    std::string mask = "*";
-    std::vector<std::string> files;
-
-    HANDLE hFind = INVALID_HANDLE_VALUE;
-    WIN32_FIND_DATA ffd;
-    std::string spec;
-    std::stack<std::string> directories;
-
-    directories.push( path );
-    files.clear();
-
-    while ( !directories.empty() )
-    {
-        path = directories.top();
-        spec = path + "\\" + mask;
-        directories.pop();
-        hFind = FindFirstFile( spec.c_str(), &ffd );
         if ( hFind == INVALID_HANDLE_VALUE )
         {
+            std::cout << "Error: invalid path\n";
             return;
+        }
+
+        if ( i == 1 )
+        {
+            imageCells.resize( maxY - minY + 1 );
+            for ( int y = 0; y < imageCells.size(); ++y )
+            {
+                imageCells[y].resize( maxX - minX + 1, nullptr );
+            }
         }
 
         do
         {
-            if ( strcmp( ffd.cFileName, "." ) != 0 &&
-                strcmp( ffd.cFileName, ".." ) != 0 )
+            if ( strcmp( FindFileData.cFileName, "." ) == 0
+                || strcmp( FindFileData.cFileName, ".." ) == 0 )
             {
-                if ( ffd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY )
-                {
-                    directories.push( path + "\\" + ffd.cFileName );
-                }
-                else
-                {
-                    std::string filename = ffd.cFileName;
-                    std::string fullpath = path + "\\" + filename;
-
-                    if ( filename.rfind( '.' ) != std::string::npos )
-                    {
-                        std::string extensionless = filename.substr( 0, filename.rfind( '.' ) );
-                        std::cout << fullpath << " -> " << extensionless << "\n";
-                    }
-                }
+                continue;
             }
-        } while ( FindNextFile( hFind, &ffd ) != 0 );
 
-        if ( GetLastError() != ERROR_NO_MORE_FILES )
-        {
-            FindClose( hFind );
-            return;
-        }
+            std::string filename = FindFileData.cFileName;
+            std::smatch matches;
+            std::regex exp( "(-?[0-9]+),(-?[0-9]+)" );
+            std::regex_search( filename, matches, exp );
+
+            if ( matches.size() < 3 )
+            {
+                std::cout << "Error parsing file: " << filename << "=>" << matches.size() << "\n";
+                continue;
+            }
+
+            int xCoord = atoi( matches[0].str().c_str() );
+            int yCoord = atoi( matches[2].str().c_str() );
+
+            // On the first pass, find the extents
+            if ( i == 0 )
+            {
+                minX = std::min( minX, xCoord );
+                maxX = std::max( maxX, xCoord );
+                minY = std::min( minY, yCoord );
+                maxY = std::max( maxY, yCoord );
+            }
+            else // On the second pass, store the image files
+            {
+                ImageFile* img = new ImageFile();
+                img->filename = filename;
+                img->x = xCoord - minX;
+                img->y = yCoord - minY;
+                imageCells[img->y][img->x] = img;
+            }
+        } while ( FindNextFile( hFind, &FindFileData ) != 0 );
 
         FindClose( hFind );
-        hFind = INVALID_HANDLE_VALUE;
     }
 }
 
 void RenderMap()
 {
+    int width = imageCells[0].size();
+    int height = imageCells.size();
     std::ofstream fout( "../output.bmp", std::ofstream::binary );
+
+    int compositeByteCount = ( width * IMAGE_WIDTH + height * IMAGE_HEIGHT ) * sizeof( char ) * 3;
 
     BITMAPFILEHEADER fileHeader;
     fileHeader.bfType = 19778;
-    fileHeader.bfSize = sizeof( BITMAPFILEHEADER ) + sizeof( BITMAPINFOHEADER ) + sizeof( char ) * COMPOSITE_BYTECOUNT;
+    fileHeader.bfSize = sizeof( BITMAPFILEHEADER ) + sizeof( BITMAPINFOHEADER ) + compositeByteCount;
     fileHeader.bfOffBits = sizeof( BITMAPFILEHEADER ) + sizeof( BITMAPINFOHEADER );
     fout.write( (char*)( &fileHeader ), sizeof( BITMAPFILEHEADER ) );
 
     BITMAPINFOHEADER infoHeader;
     memset( &infoHeader, NULL, sizeof( BITMAPINFOHEADER ) );
     infoHeader.biSize = sizeof( BITMAPINFOHEADER );
-    infoHeader.biWidth = COMPOSITE_PIXEL_WIDTH;
-    infoHeader.biHeight = COMPOSITE_PIXEL_HEIGHT;
+    infoHeader.biWidth = width * IMAGE_WIDTH;
+    infoHeader.biHeight = height * IMAGE_HEIGHT;
     infoHeader.biPlanes = 1;
     infoHeader.biBitCount = 24;
     infoHeader.biCompression = 0;
-    infoHeader.biSizeImage = sizeof( char ) * COMPOSITE_BYTECOUNT;
+    infoHeader.biSizeImage = compositeByteCount;
     fout.write( (char*)( &infoHeader ), sizeof( BITMAPINFOHEADER ) );
+
 
     char dataRow[3 * IMAGE_WIDTH];
 
-    std::ifstream rowFileHandles[RANGE_X];
+    std::vector<std::ifstream> rowFileHandles( width );
 
-    for ( int y = 0; y < RANGE_Y; ++y )
+    for ( int y = 0; y < height; ++y )
     {
-        for ( int x = 0; x < RANGE_X; ++x )
+        for ( int x = 0; x < width; ++x )
         {
             std::ifstream& fin = rowFileHandles[x];
             if ( imageCells[y][x] != nullptr )
@@ -250,7 +177,7 @@ void RenderMap()
         }
         for ( int line = 0; line < IMAGE_HEIGHT; ++line )
         {
-            for ( int x = 0; x < RANGE_X; ++x )
+            for ( int x = 0; x < width; ++x )
             {
                 memset( dataRow, NULL, IMAGE_ROW_SIZE );
                 std::ifstream& fin = rowFileHandles[x];
@@ -263,7 +190,7 @@ void RenderMap()
             }
         }
 
-        for ( int x = 0; x < RANGE_X; ++x )
+        for ( int x = 0; x < width; ++x )
         {
             if ( rowFileHandles[x].is_open() )
             {
