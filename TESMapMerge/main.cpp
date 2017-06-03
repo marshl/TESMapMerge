@@ -70,51 +70,39 @@ int main( int argc, char* argv[] )
 
     char dataRow[3 * IMAGE_WIDTH];
 
-    ifstream* rowFileHandles[RANGE_X];
-    for ( int x = 0; x < RANGE_X; ++x )
-    {
-        rowFileHandles[x] = nullptr;
-    }
+    ifstream rowFileHandles[RANGE_X];
 
     for ( int y = 0; y < RANGE_Y; ++y )
     {
         for ( int x = 0; x < RANGE_X; ++x )
         {
-            ifstream* fin;
+            ifstream& fin = rowFileHandles[x];
             if ( imageCells[y][x] != nullptr )
             {
-                fin = new ifstream( "../maps/" + imageCells[y][x]->filename, ifstream::binary );
-
+                fin.open( "../maps/" + imageCells[y][x]->filename, ifstream::binary );
             }
             else
             {
-                fin = new ifstream( "../maps/Wilderness (-21,28).bmp", ifstream::binary );
-
+                fin.open( "../maps/Wilderness (-21,28).bmp", ifstream::binary );
             }
 
-            if ( !fin->is_open() )
+            if ( !fin.is_open() )
             {
                 cout << "Error opening image file: " << imageCells[y][x]->filename << "\n";
-                delete fin;
                 continue;
             }
-            fin->seekg( sizeof( BITMAPFILEHEADER ) + sizeof( BITMAPINFOHEADER ) );
-            rowFileHandles[x] = fin;
 
-            /*else
-            {
-                cout << "Using empty data for x="<<x<<" y="<<y<<"\n";
-            }*/
+            fin.seekg( sizeof( BITMAPFILEHEADER ) + sizeof( BITMAPINFOHEADER ) );
         }
         for ( int line = 0; line < IMAGE_HEIGHT; ++line )
         {
             for ( int x = 0; x < RANGE_X; ++x )
             {
                 memset( dataRow, NULL, IMAGE_ROW_SIZE );
-                ifstream* fin = rowFileHandles[x];
-                if ( fin != nullptr )
+                ifstream& fin = rowFileHandles[x];
+                if ( fin.is_open() )
                 {
-                    fin->read( dataRow, IMAGE_ROW_SIZE );
+                    fin.read( dataRow, IMAGE_ROW_SIZE );
                 }
 
                 fout.write( dataRow, IMAGE_ROW_SIZE );
@@ -123,11 +111,9 @@ int main( int argc, char* argv[] )
 
         for ( int x = 0; x < RANGE_X; ++x )
         {
-            if ( rowFileHandles[x] != nullptr )
+            if ( rowFileHandles[x].is_open())
             {
-                rowFileHandles[x]->close();
-                delete rowFileHandles[x];
-                rowFileHandles[x] = nullptr;
+                rowFileHandles[x].close();
             }
         }
 
