@@ -77,7 +77,7 @@ void FindImageCells( int& minX, int& maxX, int& minY, int& maxY )
         if ( i == 1 )
         {
             imageCells.resize( maxY - minY + 1 );
-            for ( int y = 0; y < imageCells.size(); ++y )
+            for ( int y = 0; y < (int)imageCells.size(); ++y )
             {
                 imageCells[y].resize( maxX - minX + 1, nullptr );
             }
