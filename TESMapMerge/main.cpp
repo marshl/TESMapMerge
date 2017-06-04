@@ -23,20 +23,24 @@ struct ImageFile
 
 void FindImageCells( int& minX, int& maxX, int& minY, int& maxY );
 void PrintFilledCells();
-void RenderMap();
+void RenderMap( std::string fillerImagePath );
 
 std::vector<std::vector<ImageFile*>> imageCells;
 
-const char* waterMap = "Wilderness (-21,28).bmp";
-
 int main( int argc, char* argv[] )
 {
+    if ( argc != 2 )
+    {
+        std::cout << "Usage: TESMapMerge.exe filler_file\n";
+        return 1;
+    }
+
     int minX, maxX, minY, maxY;
 
     FindImageCells( minX, maxX, minY, maxY );
     PrintFilledCells();
 
-    RenderMap();
+    RenderMap( argv[1] );
 
     return 0;
 }
@@ -123,7 +127,7 @@ void FindImageCells( int& minX, int& maxX, int& minY, int& maxY )
     }
 }
 
-void RenderMap()
+void RenderMap( std::string fillerImagePath )
 {
     int width = imageCells[0].size();
     int height = imageCells.size();
@@ -164,7 +168,7 @@ void RenderMap()
             }
             else
             {
-                fin.open( "../maps/Wilderness (-21,28).bmp", std::ifstream::binary );
+                fin.open( std::string( "../maps/" ) + fillerImagePath, std::ifstream::binary );
             }
 
             if ( !fin.is_open() )
