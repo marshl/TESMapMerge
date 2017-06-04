@@ -42,7 +42,7 @@ You need to copy (or move) that maps folder to in the same directory as the dire
 └── TESMapMerge
     ├── TESMapMerge.exe
     └── README.md
-    
+ ```
 ## Usage
 
 After the setup has been complete, open a console in the directory where TESMapMerge.exe is installed and run
